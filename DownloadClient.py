@@ -16,7 +16,9 @@ class MyApp(tkinter.Frame):
         master.config(menu=self.menuBar)
         self.fillMenuBar()
         self.createWidgets()
-        self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
+        # self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
+        self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
+
 
     def browseFiles(self):
         filename = filedialog.askdirectory(title="Select a File")
@@ -39,7 +41,7 @@ class MyApp(tkinter.Frame):
 
     def createWidgets(self):
         self.tree = ttk.Treeview(self)
-        self.tree.pack(fill='both', expand=True, side="right", padx=10, pady=10)
+        self.tree.pack(fill='both', expand=True, side="left", padx=10, pady=10)
         self.tree.bind("<ButtonPress-1>", self.onClick)
         self.vsb = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.vsb.pack(side='right', fill='y')
@@ -48,6 +50,7 @@ class MyApp(tkinter.Frame):
         self.visualize["text"] = "Visualize"
         self.visualize["command"] = self.visualizeHierarchy
         self.visualize.pack(expand=True, side="right", padx=10, pady=10)
+
 
     def onClick(self, event):
         item = self.tree.identify('item', event.x, event.y)
@@ -58,6 +61,7 @@ class MyApp(tkinter.Frame):
         else:
             name = parent + '-' + item_name
         self.selected_node = self.node_collection.get(name)
+
 
     def visualizeHierarchy(self):
         try:
@@ -106,12 +110,14 @@ class MyApp(tkinter.Frame):
         self.createConnectionDialogWidgets()
         # self.checkConncetionDialog()
 
+
     def checkConncetionDialog(self):
         while(len(self.serverName.get()) & len(self.portName.get()) & len(self.pathName.get()) & len(self.datasourceName.get())
               & len(self.usernameName.get()) & len(self.passwordName.get()) == 0):
             self.connect["state"] = tkinter.DISABLED
             time.sleep(1)
         self.connect["state"] = tkinter.ACTIVE
+
 
     def createConnectionDialogWidgets(self):
         self.connection_frame = tkinter.Frame(self.frame)
@@ -206,17 +212,18 @@ class MyApp(tkinter.Frame):
         self.SPECCHIO = jp.JPackage('ch').specchio.client
         # 1.3 Create a client factory instance and get a list of all connection details:
         self.cf = self.SPECCHIO.SPECCHIOClientFactory.getInstance()
-        #self.db_descriptor_list = self.cf.getAllServerDescriptors()
+        self.db_descriptor_list = self.cf.getAllServerDescriptors()
         # 1.4 Connect to specchio:
-        self.db_descriptor = self.SPECCHIO.SPECCHIODatabaseDescriptor(jp.JString(self.serverName.get()),
-                                                             jp.JInt(int(self.portName.get())),
-                                                             jp.JString(self.pathName.get()),
-                                                             jp.JString(self.datasourceName.get()),
-                                                             jp.JString(self.usernameName.get()),
-                                                             jp.JString(self.passwordName.get()))
-        #self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(1))  # zero indexed
-        self.specchio_client = self.cf.createClient(self.db_descriptor)  # zero indexed
+        # self.db_descriptor = self.SPECCHIO.SPECCHIODatabaseDescriptor(jp.JString(self.serverName.get()),
+        #                                                      jp.JInt(int(self.portName.get())),
+        #                                                      jp.JString(self.pathName.get()),
+        #                                                      jp.JString(self.datasourceName.get()),
+        #                                                      jp.JString(self.usernameName.get()),
+        #                                                      jp.JString(self.passwordName.get()))
+        self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(0))  # zero indexed
+        # self.specchio_client = self.cf.createClient(self.db_descriptor)  # zero indexed
         self.buildTree()
+
 
     def buildTree(self):
         self.should_print = False
@@ -241,12 +248,6 @@ class MyApp(tkinter.Frame):
         self.buildLevels(self.days, self.hierarchies, self.children_list, self.len_l0, self.level_0, self.max_depth, self.should_print)
         self.node_collection = self.addToTreeAndDict(self.days)
 
-    # def addToTree(self, child, level):
-    #     for child in child:
-    #         if isinstance(child, list):
-    #             self.addToTree(child, level+1)
-    #         else:
-    #             self.tree.insert('', level, text=child)
 
     def addToTreeAndDict(self, days):
         node_collection = {}
@@ -258,6 +259,7 @@ class MyApp(tkinter.Frame):
                 node_collection[str(day) + '-' + node.getName()] = node
         return node_collection
 
+
     def walk_hierarchy(self, specchio_client, node, current_depth):
         depth = current_depth
         children = self.getChildren(specchio_client, node)
@@ -268,9 +270,11 @@ class MyApp(tkinter.Frame):
                 depth = self.walk_hierarchy(specchio_client, child, depth)
         return depth + 1
 
+
     def getChildren(self, specchio_client, node):
         children = specchio_client.getChildrenOfNode(node)
         return children
+
 
     def buildHierarchy(self, specchio_client, children_list, node, depth, should_print=False):
         this_depth = depth - 1
@@ -291,6 +295,7 @@ class MyApp(tkinter.Frame):
         children_list.append(current_children)
         return children_list
 
+
     def buildLevels(self, days, hierarchies, parent_list, parent_length, current_path, max_depth, should_print = False):
         this_depth = max_depth-1
         child_length = parent_length
@@ -309,6 +314,7 @@ class MyApp(tkinter.Frame):
                     hierarchies.append(path_to_child)
             else:
                 self.buildLevels(days, hierarchies, child, child_length, path_to_child, this_depth, should_print)
+
 
 if __name__ == '__main__':
     root = tkinter.Tk()

@@ -17,8 +17,8 @@ class MyApp(tkinter.Frame):
         master.config(menu=self.menuBar)
         self.fillMenuBar()
         self.createWidgets()
-        self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
-        # self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
+        # self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
+        self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
 
 
     def browseFiles(self):

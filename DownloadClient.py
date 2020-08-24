@@ -4,7 +4,8 @@ import jpype as jp
 import numpy as np
 import datetime as dt
 import matplotlib.pyplot as plt
-import time
+import ConnectionManager as cm
+import DownloadManager as dm
 from tkinter import filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -16,16 +17,15 @@ class MyApp(tkinter.Frame):
         master.config(menu=self.menuBar)
         self.fillMenuBar()
         self.createWidgets()
-        # self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
-        self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
+        self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
+        # self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
 
 
     def browseFiles(self):
         filename = filedialog.askdirectory(title="Select a File")
         self.folder_path = filename
         # Change label contents
-        print(self.folder_path)
-
+        # print(self.folder_path)
 
     def fillMenuBar(self):
         self.menuFile = tkinter.Menu(self.menuBar, tearoff=False)
@@ -38,7 +38,6 @@ class MyApp(tkinter.Frame):
         self.menuFile.add_separator()
         self.menuBar.add_cascade(label="Menu", menu=self.menuFile)
 
-
     def createWidgets(self):
         self.tree = ttk.Treeview(self)
         self.tree.pack(fill='both', expand=True, side="left", padx=10, pady=10)
@@ -49,21 +48,39 @@ class MyApp(tkinter.Frame):
         self.visualize = tkinter.Button(self)
         self.visualize["text"] = "Visualize"
         self.visualize["command"] = self.visualizeHierarchy
-        self.visualize.pack(expand=True, side="right", padx=10, pady=10)
-
+        self.visualize.pack(padx=10, pady=10)
+        self.download = tkinter.Button(self)
+        self.download["text"] = "Download"
+        self.download["command"] = self.downloadData
+        self.download.pack(padx=10, pady=10)
 
     def onClick(self, event):
         item = self.tree.identify('item', event.x, event.y)
-        item_name = self.tree.item(item, "text")
-        parent = self.tree.parent(item)
-        if parent == '':
-            name = item_name
-        else:
-            name = parent + '-' + item_name
-        self.selected_node = self.node_collection.get(name)
+        self.selected_item = item
+        self.selected_node = self.hierarchy.get(item)
 
+    def downloadData(self):
+        try:
+            node = self.selected_node
+            self.browseFiles()
+            self.download_manager = dm.DownloadManager(self.cm.SPECCHIOTYPES, self.cm.specchio_client,
+                                                       node, self.selected_item, self.folder_path, self.stop_hierarchy,
+                                                       self.tree, self.hierarchy, self.master)
+            self.download_manager.startDownload()
+
+        except AttributeError:
+            win = tkinter.Toplevel()
+            win.wm_title("ERROR")
+            l = tkinter.Label(win, text="Failed to Download. Please connect to DB first and then select some data.")
+            l.pack()
+            b = tkinter.Button(win, text="Okay", command=win.destroy)
+            b.pack()
 
     def visualizeHierarchy(self):
+        """
+        Download vectors for a certain hierarchy and visualize using matplotlib
+        :return:
+        """
         try:
             spectrum_ids = self.specchio_client.getSpectrumIdsForNode(self.selected_node)
         except:
@@ -104,150 +121,29 @@ class MyApp(tkinter.Frame):
         rem_vis["command"] = plt.clf
         rem_vis.pack(expand=True, side="right", padx=10, pady=10)
 
-
     def connectionDialog(self):
-        self.frame = tkinter.Toplevel(self, width=200, height=200)
-        self.createConnectionDialogWidgets()
-        # self.checkConncetionDialog()
-
-
-    def checkConncetionDialog(self):
-        while(len(self.serverName.get()) & len(self.portName.get()) & len(self.pathName.get()) & len(self.datasourceName.get())
-              & len(self.usernameName.get()) & len(self.passwordName.get()) == 0):
-            self.connect["state"] = tkinter.DISABLED
-            time.sleep(1)
-        self.connect["state"] = tkinter.ACTIVE
-
-
-    def createConnectionDialogWidgets(self):
-        self.connection_frame = tkinter.Frame(self.frame)
-        self.connection_frame.pack()
-        self.label_frames = tkinter.Frame(self.connection_frame)
-        self.label_frames.pack(side=tkinter.LEFT)
-
-        self.entry_frames = tkinter.Frame(self.connection_frame)
-        self.entry_frames.pack(side=tkinter.RIGHT)
-
-
-        ## Server
-        self.server = tkinter.Label(self.label_frames)
-        self.server.pack(padx=5, pady=5)
-        self.server["text"] = "Web Application Server"
-        self.entryServer = tkinter.Entry(self.entry_frames)
-        self.entryServer.pack(padx=5, pady=5)
-        self.serverName = tkinter.StringVar()
-        self.serverName.set("")
-        self.entryServer["textvariable"] = self.serverName
-
-        ## Port
-        self.port = tkinter.Label(self.label_frames)
-        self.port.pack(padx=5, pady=5)
-        self.port["text"] = "Port"
-        self.entryPort = tkinter.Entry(self.entry_frames)
-        self.entryPort.pack(padx=5, pady=5)
-        self.portName = tkinter.StringVar()
-        self.portName.set("")
-        self.entryPort["textvariable"] = self.portName
-
-        ## Application Path
-        self.path = tkinter.Label(self.label_frames)
-        self.path.pack(padx=5, pady=5)
-        self.path["text"] = "Application Path"
-        self.entryPath = tkinter.Entry(self.entry_frames)
-        self.entryPath.pack(padx=5, pady=5)
-        self.pathName = tkinter.StringVar()
-        self.pathName.set("")
-        self.entryPath["textvariable"] = self.pathName
-
-        ## Data Source Name
-        self.datasource = tkinter.Label(self.label_frames)
-        self.datasource.pack(padx=5, pady=5)
-        self.datasource["text"] = "Data Source Name"
-        self.entryDatasource = tkinter.Entry(self.entry_frames)
-        self.entryDatasource.pack(padx=5, pady=5)
-        self.datasourceName = tkinter.StringVar()
-        self.datasourceName.set("")
-        self.entryDatasource["textvariable"] = self.datasourceName
-
-        ## Username
-        self.username = tkinter.Label(self.label_frames)
-        self.username.pack(padx=5, pady=5)
-        self.username["text"] = "Username"
-        self.entryUsername = tkinter.Entry(self.entry_frames)
-        self.entryUsername.pack(padx=5, pady=5)
-        self.usernameName = tkinter.StringVar()
-        self.usernameName.set("")
-        self.entryUsername["textvariable"] = self.usernameName
-
-        ## Password
-        self.password = tkinter.Label(self.label_frames)
-        self.password.pack(padx=5, pady=5)
-        self.password["text"] = "Password"
-        self.entryPassword = tkinter.Entry(self.entry_frames)
-        self.entryPassword.pack(padx=5, pady=5)
-        self.passwordName = tkinter.StringVar()
-        self.passwordName.set("")
-        self.entryPassword["textvariable"] = self.passwordName
-
-        ## Connect
-        self.connect = tkinter.Button(self.label_frames)
-        self.connect.pack(padx=5, pady=5)
-        self.connect["text"] = "Connect"
-        self.connect["state"] = tkinter.ACTIVE
-        self.connect["command"] = self.connectAndDestroy
-
-        ## Cancel
-        self.cancel = tkinter.Button(self.entry_frames)
-        self.cancel.pack(padx=5, pady=5)
-        self.cancel["text"] = "Cancel"
-        self.cancel["command"] = self.frame.destroy
-
-
-    def connectAndDestroy(self):
-        self.frame.destroy()
-        try:
-            jp.startJVM(classpath=self.c_path, convertStrings=True)
-        except OSError as ose:
-            print(str(ose))
-        self.SPECCHIO = jp.JPackage('ch').specchio.client
-        # 1.3 Create a client factory instance and get a list of all connection details:
-        self.cf = self.SPECCHIO.SPECCHIOClientFactory.getInstance()
-        self.db_descriptor_list = self.cf.getAllServerDescriptors()
-        # 1.4 Connect to specchio:
-        # self.db_descriptor = self.SPECCHIO.SPECCHIODatabaseDescriptor(jp.JString(self.serverName.get()),
-        #                                                      jp.JInt(int(self.portName.get())),
-        #                                                      jp.JString(self.pathName.get()),
-        #                                                      jp.JString(self.datasourceName.get()),
-        #                                                      jp.JString(self.usernameName.get()),
-        #                                                      jp.JString(self.passwordName.get()))
-        self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(0))  # zero indexed
-        # self.specchio_client = self.cf.createClient(self.db_descriptor)  # zero indexed
-        self.buildTree()
-
+        self.cm = cm.ConnectionManager(self.master, self.c_path, self)
 
     def buildTree(self):
-        self.should_print = False
-        # 2. Select campaign:
-        self.campaign_node = self.specchio_client.getCampaignNode(13, "Sampling Date", jp.java.lang.Boolean(True))
+        # 1. Start with defining lowest hierarchy, this is a hack and not suitable to all specchio implementations!
+        self.stop_hierarchy = ["DN", "Radiance", "Reflectance", "SpecFit"]
+        # 2. Start with a database node:
+        self.db_node = self.cm.specchio_client.getDatabaseNode(jp.JString("Acquisition Time"), jp.JBoolean(True))
 
-        # 3. Walk campaign nodes and create list of lists:
-        # 3.1 Find depth to data (0 = top-level):
-        self.max_depth = self.walk_hierarchy(self.specchio_client, self.campaign_node, 0)
-        # 3.2 Build the complete hierarchy
-        self.children_list = []
-        self.buildHierarchy(self.specchio_client, self.children_list, self.campaign_node, self.max_depth)
+        # 3. Downlaod its children (will be campaigns):
+        self.campaigns = list(self.cm.specchio_client.getChildrenOfNode(self.db_node))
 
-        # 4. Build clean list of downloadable days:
-        self.days = []
-        self.hierarchies = []
-        campaign_name = self.campaign_node.getName()
-        if self.should_print:
-            print("\\ " + self.campaign_node.getName())
-        self.len_l0 = len(self.campaign_node.getName()) + 2
-        self.level_0 = "/" + self.campaign_node.getName()
-        self.buildLevels(self.days, self.hierarchies, self.children_list, self.len_l0, self.level_0, self.max_depth, self.should_print)
-        self.node_collection = self.addToTreeAndDict(self.days)
+        # 4. Add all the hierarchies down to the processing levels
+        self.hierarchy = {}
+        for campaign in self.campaigns:
+            self.recursiveTreeBuilder('', 0, self.hierarchy, campaign)
 
+    def recursiveTreeBuilder(self, parent_object, id, node_dict, node_object):
+        element_id = self.tree.insert(parent_object, id, text=node_object.getName())
+        node_dict[element_id] = node_object
+        if node_object.getName() not in self.stop_hierarchy:
+            for i, node in enumerate(list(self.cm.specchio_client.getChildrenOfNode(node_object))):
+                self.recursiveTreeBuilder(element_id, i, node_dict, node)
 
     def addToTreeAndDict(self, days):
         node_collection = {}
@@ -276,44 +172,35 @@ class MyApp(tkinter.Frame):
         return children
 
 
-    def buildHierarchy(self, specchio_client, children_list, node, depth, should_print=False):
+    def buildHierarchy(self, specchio_client, children_list, node, depth):
         this_depth = depth - 1
         children = self.getChildren(specchio_client, node)
         current_children = []
         for child in children:
-            if (this_depth <= 0):
-                if should_print:
-                    print("Breaking at lowest hierarchy reached for " + child.getId())
+            if (this_depth == 0):
+                print("Breaking at lowest hierarchy reached for " + child.getId())
                 break
             else:
                 current_children.append(child)
                 try:
                     self.buildHierarchy(specchio_client, current_children, child, this_depth)
                 except:
-                    if should_print:
-                        print('no more hierarchies')
+                    print('no more hierarchies')
         children_list.append(current_children)
         return children_list
 
 
-    def buildLevels(self, days, hierarchies, parent_list, parent_length, current_path, max_depth, should_print = False):
+    def buildLevels(self, days, hierarchies, parent_list, parent_length, current_path, max_depth):
         this_depth = max_depth-1
         child_length = parent_length
         path_to_child = ""
         for child in parent_list:
             if not isinstance(child, list):
-                if should_print:
-                    distance = ""
-                    for i in range(parent_length):
-                        distance += "-"
-                    print(distance + "\\ " + child.getName())
-                    path_to_child = current_path + "/" + child.getName()
-                    child_length = parent_length + len(child.getName()) + 2
                 if this_depth == 0:
                     days.append(child)
                     hierarchies.append(path_to_child)
             else:
-                self.buildLevels(days, hierarchies, child, child_length, path_to_child, this_depth, should_print)
+                self.buildLevels(days, hierarchies, child, child_length, path_to_child, this_depth)
 
 
 if __name__ == '__main__':

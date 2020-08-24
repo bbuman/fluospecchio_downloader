@@ -15,14 +15,18 @@ class LogWriter:
 
     def writeLog(self, error_type, message):
         if error_type == "ERROR":
-            self.log.write(dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ": - ERROR - " + message + ".\n")
+            self.log.write(self.getTimeStamp() + ": - ERROR - " + message + ".\n")
         elif error_type == "WARNING":
-            self.log.write(dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ": - WARNING - " + message + ".\n")
+            self.log.write(self.getTimeStamp() + ": - WARNING - " + message + ".\n")
         elif error_type == "INFO":
-            self.log.write(dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ": - INFO - " + message + ".\n")
+            self.log.write(self.getTimeStamp() + ": - INFO - " + message + ".\n")
         else:
-            self.log.write(dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ": - " + error_type + " - " + message + ".\n")
-
+            self.log.write(self.getTimeStamp() + ": - " + error_type + " - " + message + ".\n")
+        self.log.flush()
 
     def writeUpdate(self, message):
-        self.log.write(self.log.write(dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ": " + message))
+        self.log.write(self.log.write(self.getTimeStamp() + ": " + message))
+        self.log.flush()
+
+    def getTimeStamp(self):
+        return dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

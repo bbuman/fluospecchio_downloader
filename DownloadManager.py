@@ -5,6 +5,7 @@ import tkinter
 import tkinter.ttk as ttk
 import datetime as dt
 import re
+import os
 
 
 class DownloadManager:
@@ -53,13 +54,11 @@ class DownloadManager:
         prog.pack()
         self.log_writer.writeLog("INFO", "Downloading the following processing level: " + level_identifier)
 
-        temporary_target_files = []
-        temporary_reference_files = []
-
+        sensor_dict = {'FULL': {}, 'FLUO': {}}
         level_identifier = level_identifier
 
         for i, node in enumerate(node_list):
-            self.log_writer.writeLog("INFO", "Downloading the following node: " + node.getName())
+            self.log_writer.writeLog("INFO", "Downloading the following node: " + str(node.getId()))
             # update progress bar
             prog['value'] = (float(i) / len(node_list)) * 100
             self.master_frame.update_idletasks()
@@ -72,8 +71,8 @@ class DownloadManager:
 
             for space in spaces:
 
-                target = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': []}
-                reference = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': []}
+                target = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': [], 'temp_files': []}
+                reference = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': [], 'temp_files': []}
 
 
                 # Get the spectrum ids belonging to this space
@@ -84,8 +83,12 @@ class DownloadManager:
 
                 if(space_wvl[0] < 400):
                     sensor_identifier = "FULL"
+
                 else:
                     sensor_identifier = "FLUO"
+
+                sensor_dict.get(sensor_identifier)['target'] = target
+                sensor_dict.get(sensor_identifier)['reference'] = reference
 
                 # Download the data:
                 vectors = this_space.getVectors()
@@ -114,42 +117,48 @@ class DownloadManager:
                         reference["time"].append(t)
 
                 # Create Xarray dataset:
-                file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_target.nc'
+                file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_target.nc'
                 ds_target = self.to_xarray(target["signal"], target["time"], space_wvl, 'target')
-                temporary_target_files.append(file_name)
+                target['temp_files'].append(file_name)
                 ds_target.to_netcdf(file_name)
+                ds_target.close()
 
-                file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_reference.nc'
+                file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_reference.nc'
                 ds_reference = self.to_xarray(reference["signal"], reference["time"], space_wvl, 'reference')
-                temporary_reference_files.append(file_name)
+                reference['temp_files'].append(file_name)
                 ds_reference.to_netcdf(file_name)
+                ds_reference.close()
 
-        filename = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_target'
-        self.combine_datasets(temporary_target_files, filename)
-        filename = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_reference'
-        self.combine_datasets(temporary_reference_files)
+        for sensor in sensor_dict:
+            for type in sensor_dict.get(sensor)
+                filename = self.dw_path + "/" + level_identifier + '_' + sensor + '_' + type
+                self.combine_datasets(sensor_dict.get(sensor).get(tpye).get('temp_files'), filename)
 
         win.destroy()
 
     def to_xarray(self, signal, time, wvl, variable_name):
-        dataset = xr.DataArray(signal, coords=[time, wvl], dims=['time','wavelength'], name=variable_name)
+        dataset = xr.DataArray(signal, coords=[time, wvl], dims=['time', 'wavelength'], name=variable_name)
         dataset["wavelength"].attrs["units"] = "nm"
         dataset["wavelength"].attrs["long_name"] = "Wavelength"
-        dataset[variable_name].attrs["units"] = "$W^{1}m^{-2}nm^{-1}sr^{-1}$"
-        dataset[variable_name].attrs["long_name"] = variable_name
+        dataset.attrs["units"] = "$W^{1}m^{-2}nm^{-1}sr^{-1}$"
+        dataset.attrs["long_name"] = variable_name
         return dataset
 
     def combine_datasets(self, file_list, filename):
-        dataset = xr.open_mfdataset(file_list, combine = 'nested', concat_dim = 'time')
+        dataset = xr.open_mfdataset(file_list, combine='nested', concat_dim='time')
         grouping_factor = "time.season"
         n_months = len(dataset.groupby('time.month').groups)
-        n_seasons = len(dataset.groupby('time.season').groups)
         n_years = len(dataset.groupby('time.year').groups)
         if n_years > 1:
             grouping_factor = "time.year"
         elif n_months < 6:
             grouping_factor = "time.month"
         self.save_to_disk(dataset, grouping_factor, filename)
+        dataset.close()
+        self.clean_temporary_files(file_list)
+
+    def clean_temporary_files(self, temp_files):
+        [os.remove(file) for file in temp_files]
 
     def save_to_disk(self, dataset,  grouping_factor, filename):
         iternums, datasets = zip(*dataset.groupby(grouping_factor))

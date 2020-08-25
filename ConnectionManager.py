@@ -123,6 +123,6 @@ class ConnectionManager:
 
         ### --- fixed login credentials
         self.db_descriptor_list = self.cf.getAllServerDescriptors()
-        # self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(1))  # zero indexed
-        self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(0))  # zero indexed
+        self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(1))  # zero indexed
+        # self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(0))  # zero indexed
         self.dc.buildTree()

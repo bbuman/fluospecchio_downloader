@@ -17,8 +17,8 @@ class MyApp(tkinter.Frame):
         master.config(menu=self.menuBar)
         self.fillMenuBar()
         self.createWidgets()
-        # self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
-        self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
+        self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
+        # self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
 
 
     def browseFiles(self):
@@ -41,7 +41,7 @@ class MyApp(tkinter.Frame):
     def createWidgets(self):
         self.tree = ttk.Treeview(self)
         self.tree.pack(fill='both', expand=True, side="left", padx=10, pady=10)
-        self.tree.bind("<ButtonPress-1>", self.onClick)
+        self.tree.bind("<ButtonRelease-1>", self.onClick)
         self.vsb = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.vsb.pack(side='right', fill='y')
         self.tree.configure(yscrollcommand=self.vsb.set)
@@ -55,16 +55,21 @@ class MyApp(tkinter.Frame):
         self.download.pack(padx=10, pady=10)
 
     def onClick(self, event):
-        item = self.tree.identify('item', event.x, event.y)
-        self.selected_item = item
-        self.selected_node = self.hierarchy.get(item)
+        # item = self.tree.identify('item', event.x, event.y)
+        # self.selected_item = item
+        # self.selected_node = self.hierarchy.get(item)
+        self.selected_nodes = []
+        self.selected_items = self.tree.selection()
+        for item in self.selected_items:
+            self.selected_nodes.append(self.hierarchy.get(item))
+            print(self.hierarchy.get(item))
 
     def downloadData(self):
         try:
-            node = self.selected_node
+            nodes = self.selected_nodes
             self.browseFiles()
             self.download_manager = dm.DownloadManager(self.cm.SPECCHIOTYPES, self.cm.specchio_client,
-                                                       node, self.selected_item, self.folder_path, self.stop_hierarchy,
+                                                       nodes, self.selected_items, self.folder_path, self.stop_hierarchy,
                                                        self.tree, self.hierarchy, self.master)
             self.download_manager.startDownload()
 

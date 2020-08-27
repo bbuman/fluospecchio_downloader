@@ -24,6 +24,23 @@ class ConnectionManager:
         self.entry_frames = tkinter.Frame(self.connection_frame)
         self.entry_frames.pack(side=tkinter.RIGHT)
 
+        ## Protocol
+        self.protocol_label = tkinter.Label(self.label_frames)
+        self.protocol_label['text'] = "Protocol"
+        self.protocol_label.pack(padx=5, pady=5)
+        self.button_frame = tkinter.Frame(self.entry_frames)
+        self.button_frame.pack()
+        self.chose_protocols = ['http', 'https']
+        self.sel_protocol = tkinter.StringVar()
+        self.sel_protocol.set("https")
+        for protocol in self.chose_protocols:
+            b = tkinter.Radiobutton(self.button_frame)
+            b['text'] = protocol
+            b['value'] = protocol
+            b['variable'] = self.sel_protocol
+            # b['command'] = self.handler
+            b.pack(anchor="w", side='right')
+
         ## Server
         self.server = tkinter.Label(self.label_frames)
         self.server.pack(padx=5, pady=5)
@@ -97,6 +114,9 @@ class ConnectionManager:
         self.cancel["text"] = "Cancel"
         self.cancel["command"] = self.frame.destroy
 
+    def handler(self):
+       print(self.sel_protocol.get())
+
     def connectAndDestroy(self):
         """
         connect to the server
@@ -112,17 +132,22 @@ class ConnectionManager:
         # 1.3 Create a client factory instance and get a list of all connection details:
         self.cf = self.SPECCHIO.SPECCHIOClientFactory.getInstance()
 
-        ### --- custom login credentials - not yet working:
-        # self.db_descriptor = self.SPECCHIO.SPECCHIODatabaseDescriptor(jp.JString(self.serverName.get()),
-        #                                                      jp.JInt(int(self.portName.get())),
-        #                                                      jp.JString(self.pathName.get()),
-        #                                                      jp.JString(self.datasourceName.get()),
-        #                                                      jp.JString(self.usernameName.get()),
-        #                                                      jp.JString(self.passwordName.get()))
-        # self.specchio_client = self.cf.createClient(self.db_descriptor)  # zero indexed
+        ### --- custom login credentials - not yet working: https://username@host:port/service@jdbc
+        self.db_descriptor = self.SPECCHIO.SPECCHIOWebAppDescriptor(
+                                                              jp.JString(self.sel_protocol.get()),         # http or https
+                                                              jp.JString(self.serverName.get()),       # server
+                                                              jp.JInt(int(self.portName.get())),       # port (int)
+                                                              jp.JString(self.pathName.get()),         # path
+                                                              jp.JString(self.usernameName.get()),     # user
+                                                              jp.JString(self.passwordName.get()),     # password
+                                                              jp.JString(self.datasourceName.get()),   # datasource
+                                                              jp.JBoolean(False),                       # trust_store
+                                                              jp.JString('1')
+                                                              )
+        self.specchio_client = self.cf.createClient(self.db_descriptor)  # zero indexed
 
         ### --- fixed login credentials
-        self.db_descriptor_list = self.cf.getAllServerDescriptors()
-        self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(1))  # zero indexed
+        # self.db_descriptor_list = self.cf.getAllServerDescriptors()
+        # self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(1))  # zero indexed
         # self.specchio_client = self.cf.createClient(self.db_descriptor_list.get(0))  # zero indexed
         self.dc.buildTree()

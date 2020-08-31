@@ -22,8 +22,7 @@ class DownloadManager:
         self.hierarchy = hierarchy
         self.log_writer = lw.LogWriter(self.dw_path)
         self.master_frame = master_frame
-        self.all_meta = ['Target/Reference Designator', 'Integration Time',
-                            'Optical Compartment Humidity', 'Optical Compartment Temperature',
+        self.all_meta = ['Integration Time', 'Optical Compartment Humidity', 'Optical Compartment Temperature',
                             'PCB Humidity', 'PCB Temperature', 'Spectrometer Frame Temperature', 'f_SpecFit_A',
                             'f_SpecFit_B', 'f_int', 'f_max_FR', 'f_max_FR_wvl', 'f_max_R', 'f_max_R_wvl']
 
@@ -186,7 +185,10 @@ class DownloadManager:
                         target["time"].append(t)
                         target["name"].append(name)
                         for key in metadata:
-                            target.get("metadata")[key].append(metadata.get(key).get(j))
+                            if float(metadata.get(key).get(j)) == -999.0:
+                                target.get("metadata")[key].append(np.nan)
+                            else:
+                                target.get("metadata")[key].append(metadata.get(key).get(j))
 
                     else:
                         reference["signal"].append(vector)

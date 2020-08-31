@@ -103,7 +103,8 @@ class DownloadManager:
         for child in self.tree.get_children(tree_item):
             child_name = self.hierarchy.get(child).getName()
             try:
-                download_dict[child_name].append(self.hierarchy.get(child))
+                if self.hierarchy.get(child) not in download_dict[child_name]:
+                    download_dict[child_name].append(self.hierarchy.get(child))
             except:
                 self.createDownloadHierarchy(child, download_dict)
 
@@ -120,22 +121,13 @@ class DownloadManager:
         level_identifier = level_identifier
 
         if level_identifier == "DN" or level_identifier == "Radiance":
-            sensor_dict.get("FULL")['target'] = []
-            sensor_dict.get("FULL")['target_meta'] = []
-
-            sensor_dict.get("FLUO")['target'] = []
-            sensor_dict.get("FLUO")['target_meta'] = []
-
-            sensor_dict.get("FULL")['reference'] = []
-            sensor_dict.get("FULL")['reference_meta'] = []
-
-            sensor_dict.get("FLUO")['reference'] = []
-            sensor_dict.get("FLUO")['target_meta'] = []
+            sensor_dict.get("FULL")['target'] = {'pickle_names': [], 'xarray_names': []}
+            sensor_dict.get("FLUO")['target'] = {'pickle_names': [], 'xarray_names': []}
+            sensor_dict.get("FULL")['reference'] = {'pickle_names': [], 'xarray_names': []}
+            sensor_dict.get("FLUO")['reference'] = {'pickle_names': [], 'xarray_names': []}
         else:
-            sensor_dict.get("FULL")['target'] = []
-            sensor_dict.get("FULL")['target_meta'] = []
-            sensor_dict.get("FLUO")['target'] = []
-            sensor_dict.get("FLUO")['target_meta'] = []
+            sensor_dict.get("FULL")['target'] = {'pickle_names': [], 'xarray_names': []}
+            sensor_dict.get("FLUO")['target'] = {'pickle_names': [], 'xarray_names': []}
 
         for i, node in enumerate(node_list):
             self.log_writer.writeLog("INFO", "Downloading the following node: " + str(node.getId()))
@@ -161,8 +153,8 @@ class DownloadManager:
                 else:
                     sensor_identifier = "FLUO"
 
-                target = {'name': [], 'time': [], 'signal': [], 'id': [], 'temp_files': [], 'metadata':{}}
-                reference = {'name': [], 'time': [], 'signal': [], 'id': [], 'temp_files': [], 'metadata':{}}
+                target = {'name': [], 'time': [], 'signal': [], 'id': [], 'temp_files': [], 'metadata': {}}
+                reference = {'name': [], 'time': [], 'signal': [], 'id': [], 'temp_files': [], 'metadata': {}}
 
                 # Download the data:
                 vectors = this_space.getVectors()
@@ -209,7 +201,7 @@ class DownloadManager:
                 ds_target = self.to_xarray(target.get('signal'),
                                            target.get('time'),
                                            space_wvl, 'target', level_identifier)
-                sensor_dict.get(sensor_identifier).get('target').append(file_name)
+                sensor_dict.get(sensor_identifier).get('target').get('xarray_names').append(file_name)
                 ds_target.to_netcdf(file_name)
                 ds_target.close()
 
@@ -219,14 +211,14 @@ class DownloadManager:
                     df_target[metaparameter] = target.get('metadata').get(metaparameter)
                 df_target = df_target.set_index('Time')
                 df_target.to_pickle(pandas_name)
-                sensor_dict.get(sensor_identifier).get('target_meta').append(pandas_name)
+                sensor_dict.get(sensor_identifier).get('target').get('pickle_names').append(pandas_name)
 
                 if level_identifier == "DN" or level_identifier == "Radiance":
                     file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_reference.nc'
                     ds_reference = self.to_xarray(reference.get('signal'),
                                            reference.get('time'),
                                            space_wvl, 'reference', level_identifier)
-                    sensor_dict.get(sensor_identifier).get('reference').append(file_name)
+                    sensor_dict.get(sensor_identifier).get('reference').get('xarray_names').append(file_name)
                     ds_reference.to_netcdf(file_name)
                     ds_reference.close()
 
@@ -236,15 +228,16 @@ class DownloadManager:
                         df_reference[metaparameter] = reference.get('metadata').get(metaparameter)
                     df_reference = df_reference.set_index('Time')
                     df_reference.to_pickle(pandas_name)
-                    sensor_dict.get(sensor_identifier).get('reference_meta').append(pandas_name)
+                    sensor_dict.get(sensor_identifier).get('reference').get('pickle_names').append(pandas_name)
 
 
         for sensor in sensor_dict:
-            for target_type in sensor_dict.get(sensor):
-                if len(sensor_dict.get(sensor).get(target_type)) > 0:
-                    filename = self.dw_path + "/" + level_identifier + '_' + sensor + '_' + target_type
-                    self.combine_datasets(sensor_dict.get(sensor).get(target_type), filename)
-                    self.combine_pickles(sensor_dict.get(sensor).get(target_type + '_meta'), filename)
+            for mtype in sensor_dict.get(sensor):
+                filename = self.dw_path + "/" + level_identifier + '_' + sensor + '_' + mtype
+                if len(sensor_dict.get(sensor).get(mtype).get('xarray_names')) > 0:
+                    self.combine_datasets(sensor_dict.get(sensor).get(mtype).get('xarray_names'), filename)
+                if len(sensor_dict.get(sensor).get(mtype).get('pickle_names')) > 0:
+                    self.combine_pickles(sensor_dict.get(sensor).get(mtype).get('pickle_names'), filename)
 
         win.destroy()
 
@@ -282,9 +275,10 @@ class DownloadManager:
 
     def combine_pickles(self, file_list, filename):
         df_all = pd.read_pickle(file_list[0])
-        for file in enumerate(file_list[1:]):
+        for file in file_list[1:]:
             df = pd.read_pickle(file)
             df_all = df_all.append(df)
+        df_all = df_all.replace(-999.0, np.NaN)
 
         df_all.to_pickle(filename + '_meta.pkl')
         self.clean_temporary_files(file_list)

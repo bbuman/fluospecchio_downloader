@@ -6,6 +6,7 @@ import tkinter.ttk as ttk
 import datetime as dt
 import re
 import os
+import pandas as pd
 
 
 class DownloadManager:
@@ -21,28 +22,46 @@ class DownloadManager:
         self.hierarchy = hierarchy
         self.log_writer = lw.LogWriter(self.dw_path)
         self.master_frame = master_frame
+        self.all_meta = ['Target/Reference Designator', 'Integration Time',
+                            'Optical Compartment Humidity', 'Optical Compartment Temperature',
+                            'PCB Humidity', 'PCB Temperature', 'Spectrometer Frame Temperature', 'f_SpecFit_A',
+                            'f_SpecFit_B', 'f_int', 'f_max_FR', 'f_max_FR_wvl', 'f_max_R', 'f_max_R_wvl']
+
 
     def startDownload(self):
         # Downloadable hierarchies are:
         self.download_hierarchy = {}
         for name in self.stop_hierarchy:
             self.download_hierarchy[name] = []
-        # # Write start information
-        # for node in self.selected_nodes:
-        #     if isinstance(node, self.types.campaign_node):
-        #         self.log_writer.writeLog("INFO", "Starting download for the following camapign: " + node.getName())
-        #     else:
-        #         self.log_writer.writeLog("INFO", "Starting download for the following hierarchy: " + node.getName())
         # Fill download hierarchy information
         for item in self.selected_items:
             self.createDownloadHierarchy(item, self.download_hierarchy)
 
         self.win = tkinter.Toplevel()
         self.win.wm_title("Info")
+
+        # Frame
+        self.select_meta = tkinter.LabelFrame(self.win)
+        self.select_meta["text"] = "Please chose metadata"
+        self.select_meta.pack(side="right", padx=5, pady=5, expand=True)
+        self.chosen_meta = []
+        self.meta_vars = []
+        self.meta_checks = []
+        for mp in self.all_meta:
+            var = tkinter.BooleanVar()
+            var.set(False)
+            check = tkinter.Checkbutton(self.select_meta)
+            check["text"] = mp
+            check["command"] = self.handle_meta_selection
+            check["variable"] = var
+            check.pack(anchor="w")
+            self.meta_checks.append(check)
+            self.meta_vars.append(var)
+
         # Frame
         self.select_levels = tkinter.LabelFrame(self.win)
-        self.select_levels["text"] = "Please chose"
-        self.select_levels.pack()
+        self.select_levels["text"] = "Please chose processing level(s)"
+        self.select_levels.pack(side="right", padx=5, pady=5, expand=True)
         self.chosen_levels =  []
         self.vars = []
         self.checks = []
@@ -58,7 +77,7 @@ class DownloadManager:
             self.vars.append(var)
 
         okbtn = tkinter.Button(self.win)
-        okbtn.pack()
+        okbtn.pack(side="bottom", padx=5, pady=5, expand=True)
         okbtn["text"] = "OK"
         okbtn["state"] = tkinter.ACTIVE
         okbtn["command"] = self.destroy_and_download
@@ -68,6 +87,12 @@ class DownloadManager:
         for i, var in enumerate(self.vars):
             if var.get():
                 self.chosen_levels.append(self.checks[i]["text"])
+
+    def handle_meta_selection(self):
+        self.chosen_meta.clear()
+        for i, var in enumerate(self.meta_vars):
+            if var.get():
+                self.chosen_meta.append(self.meta_checks[i]["text"])
 
     def destroy_and_download(self):
         self.win.destroy()
@@ -94,17 +119,23 @@ class DownloadManager:
         sensor_dict = {'FULL': {}, 'FLUO': {}}
         level_identifier = level_identifier
 
-        # target = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': [], 'temp_files': []}
-        # reference = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': [], 'temp_files': []}
-
         if level_identifier == "DN" or level_identifier == "Radiance":
             sensor_dict.get("FULL")['target'] = []
+            sensor_dict.get("FULL")['target_meta'] = []
+
             sensor_dict.get("FLUO")['target'] = []
+            sensor_dict.get("FLUO")['target_meta'] = []
+
             sensor_dict.get("FULL")['reference'] = []
+            sensor_dict.get("FULL")['reference_meta'] = []
+
             sensor_dict.get("FLUO")['reference'] = []
+            sensor_dict.get("FLUO")['target_meta'] = []
         else:
             sensor_dict.get("FULL")['target'] = []
+            sensor_dict.get("FULL")['target_meta'] = []
             sensor_dict.get("FLUO")['target'] = []
+            sensor_dict.get("FLUO")['target_meta'] = []
 
         for i, node in enumerate(node_list):
             self.log_writer.writeLog("INFO", "Downloading the following node: " + str(node.getId()))
@@ -130,48 +161,65 @@ class DownloadManager:
                 else:
                     sensor_identifier = "FLUO"
 
-                target = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': [], 'temp_files': []}
-                reference = {'name': [], 'time': [], 'signal': [], 'id': [], 'metadata': [], 'temp_files': []}
+                target = {'name': [], 'time': [], 'signal': [], 'id': [], 'temp_files': [], 'metadata':{}}
+                reference = {'name': [], 'time': [], 'signal': [], 'id': [], 'temp_files': [], 'metadata':{}}
 
                 # Download the data:
                 vectors = this_space.getVectors()
                 names = self.specchio_client.getMetaparameterValues(space_ids, 'File Name')
                 timings = self.specchio_client.getMetaparameterValues(space_ids, 'Acquisition Time (UTC)')
 
-                for i in range(vectors.size()):
+                # Download metadata:
+                metadata = {}
+                for mp in self.chosen_meta:
+                    metadata[mp] = self.specchio_client.getMetaparameterValues(space_ids, mp)
+                    target.get("metadata")[mp] = []
+                    reference.get("metadata")[mp] = []
+
+                for j in range(vectors.size()):
                     try:
-                        t = dt.datetime.strptime(timings.get(i).toString(), '%Y-%m-%dT%H:%M:%S.%fZ')
+                        t = dt.datetime.strptime(timings.get(j).toString(), '%Y-%m-%dT%H:%M:%S.%fZ')
                     except:
                         continue
-                    vector = np.array(vectors.get(i))
-                    name = names.get(i)
+                    vector = np.array(vectors.get(j))
+                    name = names.get(j)
+
                     # Used to split up the data into incoming and reflected \n",
                     is_target = False
                     if(re.search("VEG*", name)):
                         is_target = True
 
                     if (is_target):
-                        # sensor_dict.get(sensor_identifier).get('target').get("signal").append(vector)
-                        # sensor_dict.get(sensor_identifier).get('target').get("time").append(t)
                         target["signal"].append(vector)
                         target["time"].append(t)
-                        # target["name"].append(name)
+                        target["name"].append(name)
+                        for key in metadata:
+                            target.get("metadata")[key].append(metadata.get(key).get(j))
+
                     else:
-                        # sensor_dict.get(sensor_identifier).get('reference').get("signal").append(vector)
-                        # sensor_dict.get(sensor_identifier).get('reference').get("time").append(t)
                         reference["signal"].append(vector)
                         reference["time"].append(t)
-                        # reference["name"].append(name)
+                        reference["name"].append(name)
+                        for key in metadata:
+                            reference.get("metadata")[key].append(metadata.get(key).get(j))
+
 
                 # Create Xarray dataset:
                 file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_target.nc'
                 ds_target = self.to_xarray(target.get('signal'),
                                            target.get('time'),
                                            space_wvl, 'target', level_identifier)
-                # sensor_dict.get(sensor_identifier).get('target').get('temp_files').append(file_name)
                 sensor_dict.get(sensor_identifier).get('target').append(file_name)
                 ds_target.to_netcdf(file_name)
                 ds_target.close()
+
+                pandas_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_target_meta.pkl'
+                df_target = pd.DataFrame({'Time': target.get("time"), 'File Name': target.get("name")})
+                for metaparameter in target.get('metadata'):
+                    df_target[metaparameter] = target.get('metadata').get(metaparameter)
+                df_target = df_target.set_index('Time')
+                df_target.to_pickle(pandas_name)
+                sensor_dict.get(sensor_identifier).get('target_meta').append(pandas_name)
 
                 if level_identifier == "DN" or level_identifier == "Radiance":
                     file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_reference.nc'
@@ -182,11 +230,21 @@ class DownloadManager:
                     ds_reference.to_netcdf(file_name)
                     ds_reference.close()
 
+                    pandas_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_reference_meta.pkl'
+                    df_reference = pd.DataFrame({'Time': reference.get("time"), 'File Name': reference.get("name")})
+                    for metaparameter in reference.get('metadata'):
+                        df_reference[metaparameter] = reference.get('metadata').get(metaparameter)
+                    df_reference = df_reference.set_index('Time')
+                    df_reference.to_pickle(pandas_name)
+                    sensor_dict.get(sensor_identifier).get('reference_meta').append(pandas_name)
+
+
         for sensor in sensor_dict:
-            for mtype in sensor_dict.get(sensor):
-                if len(sensor_dict.get(sensor).get(mtype)) > 0:
-                    filename = self.dw_path + "/" + level_identifier + '_' + sensor + '_' + mtype
-                    self.combine_datasets(sensor_dict.get(sensor).get(mtype), filename)
+            for target_type in sensor_dict.get(sensor):
+                if len(sensor_dict.get(sensor).get(target_type)) > 0:
+                    filename = self.dw_path + "/" + level_identifier + '_' + sensor + '_' + target_type
+                    self.combine_datasets(sensor_dict.get(sensor).get(target_type), filename)
+                    self.combine_pickles(sensor_dict.get(sensor).get(target_type + '_meta'), filename)
 
         win.destroy()
 
@@ -220,6 +278,15 @@ class DownloadManager:
             grouping_factor = "time.month"
         self.save_to_disk(dataset, grouping_factor, filename)
         dataset.close()
+        self.clean_temporary_files(file_list)
+
+    def combine_pickles(self, file_list, filename):
+        df_all = pd.read_pickle(file_list[0])
+        for file in enumerate(file_list[1:]):
+            df = pd.read_pickle(file)
+            df_all = df_all.append(df)
+
+        df_all.to_pickle(filename + '_meta.pkl')
         self.clean_temporary_files(file_list)
 
     def clean_temporary_files(self, temp_files):

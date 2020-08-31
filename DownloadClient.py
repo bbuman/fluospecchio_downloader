@@ -39,20 +39,22 @@ class MyApp(tkinter.Frame):
         self.menuBar.add_cascade(label="Menu", menu=self.menuFile)
 
     def createWidgets(self):
+       # self.visualize = tkinter.Button(self)
+        # self.visualize["text"] = "Visualize"
+        # self.visualize["command"] = self.visualizeHierarchy
+        # self.visualize.pack(padx=10, pady=10)
+        self.download = tkinter.Button(self)
+        self.download["text"] = "Download"
+        self.download["command"] = self.downloadData
+        self.download.pack(padx=10, pady=10)
+
+    def createTree(self):
         self.tree = ttk.Treeview(self)
         self.tree.pack(fill='both', expand=True, side="left", padx=10, pady=10)
         self.tree.bind("<ButtonRelease-1>", self.onClick)
         self.vsb = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.vsb.pack(side='right', fill='y')
         self.tree.configure(yscrollcommand=self.vsb.set)
-        self.visualize = tkinter.Button(self)
-        self.visualize["text"] = "Visualize"
-        self.visualize["command"] = self.visualizeHierarchy
-        self.visualize.pack(padx=10, pady=10)
-        self.download = tkinter.Button(self)
-        self.download["text"] = "Download"
-        self.download["command"] = self.downloadData
-        self.download.pack(padx=10, pady=10)
 
     def onClick(self, event):
         # item = self.tree.identify('item', event.x, event.y)
@@ -127,6 +129,7 @@ class MyApp(tkinter.Frame):
         rem_vis.pack(expand=True, side="right", padx=10, pady=10)
 
     def connectionDialog(self):
+        self.createTree()
         self.cm = cm.ConnectionManager(self.master, self.c_path, self)
 
     def buildTree(self):
@@ -210,5 +213,6 @@ class MyApp(tkinter.Frame):
 
 if __name__ == '__main__':
     root = tkinter.Tk()
+    root.geometry("500x1000")
     app = MyApp(root)
     app.mainloop()

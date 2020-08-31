@@ -200,51 +200,37 @@ class DownloadManager:
                 file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_target.nc'
                 ds_target = self.to_xarray(target.get('signal'),
                                            target.get('time'),
+                                           target.get('metadata'),
                                            space_wvl, 'target', level_identifier)
                 sensor_dict.get(sensor_identifier).get('target').get('xarray_names').append(file_name)
                 ds_target.to_netcdf(file_name)
                 ds_target.close()
 
-                pandas_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_target_meta.pkl'
-                df_target = pd.DataFrame({'Time': target.get("time"), 'File Name': target.get("name")})
-                for metaparameter in target.get('metadata'):
-                    df_target[metaparameter] = target.get('metadata').get(metaparameter)
-                df_target = df_target.set_index('Time')
-                df_target.to_pickle(pandas_name)
-                sensor_dict.get(sensor_identifier).get('target').get('pickle_names').append(pandas_name)
-
                 if level_identifier == "DN" or level_identifier == "Radiance":
                     file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_reference.nc'
                     ds_reference = self.to_xarray(reference.get('signal'),
                                            reference.get('time'),
+                                           reference.get('metadata'),
                                            space_wvl, 'reference', level_identifier)
                     sensor_dict.get(sensor_identifier).get('reference').get('xarray_names').append(file_name)
                     ds_reference.to_netcdf(file_name)
                     ds_reference.close()
-
-                    pandas_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_reference_meta.pkl'
-                    df_reference = pd.DataFrame({'Time': reference.get("time"), 'File Name': reference.get("name")})
-                    for metaparameter in reference.get('metadata'):
-                        df_reference[metaparameter] = reference.get('metadata').get(metaparameter)
-                    df_reference = df_reference.set_index('Time')
-                    df_reference.to_pickle(pandas_name)
-                    sensor_dict.get(sensor_identifier).get('reference').get('pickle_names').append(pandas_name)
-
 
         for sensor in sensor_dict:
             for mtype in sensor_dict.get(sensor):
                 filename = self.dw_path + "/" + level_identifier + '_' + sensor + '_' + mtype
                 if len(sensor_dict.get(sensor).get(mtype).get('xarray_names')) > 0:
                     self.combine_datasets(sensor_dict.get(sensor).get(mtype).get('xarray_names'), filename)
-                if len(sensor_dict.get(sensor).get(mtype).get('pickle_names')) > 0:
-                    self.combine_pickles(sensor_dict.get(sensor).get(mtype).get('pickle_names'), filename)
 
         win.destroy()
 
-    def to_xarray(self, signal, time, wvl, variable_name, processing_level):
+    def to_xarray(self, signal, time, metadata, wvl, variable_name, processing_level):
         dataset = xr.DataArray(signal, coords=[time, wvl], dims=['time', 'wavelength'], name=variable_name)
         dataset["wavelength"].attrs["units"] = "nm"
         dataset["wavelength"].attrs["long_name"] = "Wavelength"
+        dataset = dataset.to_dataset()
+        for metaparameter in metadata:
+            dataset[metaparameter] = (['time'], metadata.get(metaparameter))
         if processing_level == "DN":
             dataset.attrs["units"] = "Digital Number"
             dataset.attrs["long_name"] = variable_name
@@ -273,15 +259,6 @@ class DownloadManager:
         dataset.close()
         self.clean_temporary_files(file_list)
 
-    def combine_pickles(self, file_list, filename):
-        df_all = pd.read_pickle(file_list[0])
-        for file in file_list[1:]:
-            df = pd.read_pickle(file)
-            df_all = df_all.append(df)
-        df_all = df_all.replace(-999.0, np.NaN)
-
-        df_all.to_pickle(filename + '_meta.pkl')
-        self.clean_temporary_files(file_list)
 
     def clean_temporary_files(self, temp_files):
         [os.remove(file) for file in temp_files]

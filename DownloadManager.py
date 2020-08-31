@@ -25,6 +25,8 @@ class DownloadManager:
         self.all_meta = ['Integration Time', 'Optical Compartment Humidity', 'Optical Compartment Temperature',
                             'PCB Humidity', 'PCB Temperature', 'Spectrometer Frame Temperature', 'f_SpecFit_A',
                             'f_SpecFit_B', 'f_int', 'f_max_FR', 'f_max_FR_wvl', 'f_max_R', 'f_max_R_wvl']
+        self.all_meta_level = {'DN': self.all_meta[0:6], 'Radiance': self.all_meta[0:6],
+                               'Reflectance': self.all_meta[0:6], 'SpecFit': self.all_meta}
 
 
     def startDownload(self):
@@ -163,9 +165,10 @@ class DownloadManager:
                 # Download metadata:
                 metadata = {}
                 for mp in self.chosen_meta:
-                    metadata[mp] = self.specchio_client.getMetaparameterValues(space_ids, mp)
-                    target.get("metadata")[mp] = []
-                    reference.get("metadata")[mp] = []
+                    if mp in self.all_meta_level.get(level_identifier):
+                        metadata[mp] = self.specchio_client.getMetaparameterValues(space_ids, mp)
+                        target.get("metadata")[mp] = []
+                        reference.get("metadata")[mp] = []
 
                 for j in range(vectors.size()):
                     try:
@@ -185,7 +188,9 @@ class DownloadManager:
                         target["time"].append(t)
                         target["name"].append(name)
                         for key in metadata:
-                            if float(metadata.get(key).get(j)) == -999.0:
+                            if metadata.get(key).get(j) == None:
+                                target.get("metadata")[key].append(np.nan)
+                            elif float(metadata.get(key).get(j)) == -999.0:
                                 target.get("metadata")[key].append(np.nan)
                             else:
                                 target.get("metadata")[key].append(metadata.get(key).get(j))

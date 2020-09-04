@@ -1,6 +1,5 @@
 import tkinter
 import jpype as jp
-import DownloadClient as dc
 
 
 class ConnectionManager:

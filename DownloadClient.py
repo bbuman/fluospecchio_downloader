@@ -17,7 +17,7 @@ class MyApp(tkinter.Frame):
         master.config(menu=self.menuBar)
         self.fillMenuBar()
         self.createWidgets()
-        self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
+        # self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
         # self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
 
 
@@ -32,8 +32,8 @@ class MyApp(tkinter.Frame):
         self.menuFile.add_separator()
         self.menuFile.add_command(label="Connect", command=self.connectionDialog)
         self.menuFile.add_separator()
-        self.menuFile.add_command(label="Save to", command=self.browseFiles)
-        self.menuFile.add_separator()
+        #self.menuFile.add_command(label="Save to", command=self.browseFiles)
+        #self.menuFile.add_separator()
         self.menuFile.add_command(label="Quit", command=self.quit)
         self.menuFile.add_separator()
         self.menuBar.add_cascade(label="Menu", menu=self.menuFile)
@@ -83,6 +83,10 @@ class MyApp(tkinter.Frame):
             b = tkinter.Button(win, text="Okay", command=win.destroy)
             b.pack()
 
+    def findSpecchioClient(self):
+        filename = filedialog.askopenfilename(title="Please Navigate to the Specchio Client")
+        self.c_path = filename
+
     def visualizeHierarchy(self):
         """
         Download vectors for a certain hierarchy and visualize using matplotlib
@@ -130,6 +134,7 @@ class MyApp(tkinter.Frame):
 
     def connectionDialog(self):
         self.createTree()
+        self.findSpecchioClient()
         self.cm = cm.ConnectionManager(self.master, self.c_path, self)
 
     def buildTree(self):

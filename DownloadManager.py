@@ -6,7 +6,6 @@ import tkinter.ttk as ttk
 import datetime as dt
 import re
 import os
-import pandas as pd
 
 
 class DownloadManager:
@@ -268,7 +267,11 @@ class DownloadManager:
 
 
     def clean_temporary_files(self, temp_files):
-        [os.remove(file) for file in temp_files]
+        for file in temp_files:
+            try:
+                os.remove(file)
+            except:
+                print("File not found.")
 
     def save_to_disk(self, dataset,  grouping_factor, filename):
         iternums, datasets = zip(*dataset.groupby(grouping_factor))

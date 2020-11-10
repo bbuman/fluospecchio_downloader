@@ -6,6 +6,7 @@ import datetime as dt
 import matplotlib.pyplot as plt
 import ConnectionManager as cm
 import DownloadManager as dm
+import CalibrationManager as cal_man
 from tkinter import filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -20,7 +21,6 @@ class MyApp(tkinter.Frame):
         # self.c_path = "C:/Program Files/SPECCHIO/specchio-client.jar"
         # self.c_path = "C:\\Users\\Bastian\\Downloads\\specchio-client\\specchio-client.jar"
 
-
     def browseFiles(self):
         filename = filedialog.askdirectory(title="Select a File")
         self.folder_path = filename
@@ -31,6 +31,8 @@ class MyApp(tkinter.Frame):
         self.menuFile = tkinter.Menu(self.menuBar, tearoff=False)
         self.menuFile.add_separator()
         self.menuFile.add_command(label="Connect", command=self.connectionDialog)
+        self.menuFile.add_separator()
+        self.menuFile.add_command(label="Calibration", command=self.calibrationDiaolog)
         self.menuFile.add_separator()
         #self.menuFile.add_command(label="Save to", command=self.browseFiles)
         #self.menuFile.add_separator()
@@ -66,6 +68,21 @@ class MyApp(tkinter.Frame):
             self.selected_nodes.append(self.hierarchy.get(item))
             print(self.hierarchy.get(item))
 
+    def calibrationDiaolog(self):
+        self.findRawData()
+        self.findCalibrationFile()
+        if self.calibration_path == 'empty':
+            win = tkinter.Toplevel()
+            win.wm_title("ERROR")
+            l = tkinter.Label(win, text="The provided calibration file is not valid. Please try again.")
+            l.pack()
+            b = tkinter.Button(win, text="Okay", command=win.destroy)
+            b.pack()
+        self.calibration_frame = tkinter.LabelFrame(self, text='Calibration')
+        self.calibration_frame.pack()
+        self.calibration_manager = cal_man.CalibrationManager(self.raw_data_path, self.calibration_path, self.calibration_frame)
+
+
     def downloadData(self):
         try:
             nodes = self.selected_nodes
@@ -86,6 +103,17 @@ class MyApp(tkinter.Frame):
     def findSpecchioClient(self):
         filename = filedialog.askopenfilename(title="Please Navigate to the Specchio Client")
         self.c_path = filename
+
+    def findRawData(self):
+        filename = filedialog.askdirectory(title="Please Navigate to the raw data.")
+        self.raw_data_path = filename
+
+    def findCalibrationFile(self):
+        filename = filedialog.askopenfilename(title="Please Navigate to the calibration file you want to use")
+        if not filename.lower().endswith('.csv'):
+            self.calibration_path = 'empty'
+        else:
+            self.calibration_path = filename
 
     def visualizeHierarchy(self):
         """

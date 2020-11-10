@@ -32,7 +32,6 @@ class CalibrationManager:
         self.full_files, self.fluo_files = self.list_files()
         self.display_files()
 
-
     def list_files(self):
         full_csv = []
         fluo_csv = []
@@ -87,6 +86,7 @@ class CalibrationManager:
         # Remove previously handled:
         self.remove_handled_files(self.dpath + 'files_handled_FULL.csv', self.full_files)
         self.remove_handled_files(self.dpath + 'files_handled_FLUO.csv', self.fluo_files)
+
         # Read the calibration file:
         self.cal_fluo, self.cal_full = self.parse_calfile(self.cpath)
         # Create a list with files that need to be deleted at the end of the calibration:
@@ -94,8 +94,6 @@ class CalibrationManager:
 
         # Choose where to store the data
         self.storepath = filedialog.askdirectory(title="Please choose the storage location.")
-
-        # Gather location and campaign
 
         # iterate the full sensor files:
         self.iterate_files(self.full_files, self.cal_full, 'FULL', self.box_name)
@@ -339,8 +337,8 @@ class CalibrationManager:
         veg = np.array(veg)
         wl = np.array(wl)
 
-        wr_dataset = self.create_xarray(wr, [time_wr, wl], ['time', 'wavelength'], 'radiance')
-        veg_dataset = self.create_xarray(veg, [time_veg, wl], ['time', 'wavelength'], 'radiance')
+        wr_dataset = self.create_xarray(wr, [time_wr, wl], ['time', 'wavelength'], 'wr')
+        veg_dataset = self.create_xarray(veg, [time_veg, wl], ['time', 'wavelength'], 'veg')
 
         return wr_dataset, veg_dataset
 
@@ -366,10 +364,12 @@ class CalibrationManager:
 
     def create_xarray(self, data, coordinates, dimensions, data_name):
         ds = xr.DataArray(data, coords=coordinates, dims=dimensions, name=data_name)
-        ds.wavelength.attrs["units"] = "nm"
-        ds.wavelength.attrs["long_name"] = "Wavelength"
-        ds.attrs["units"] = "$W^{1}m^{-2}nm^{-1}sr^{-1}$"
-        ds.attrs["long_name"] = "Radiance"
+        ds = ds.to_dataset()
+        ds['wavelength'].attrs["units"] = "nm"
+        ds['wavelength'].attrs["long_name"] = "Wavelength"
+        ds['time'].attrs['long_name'] = "Time"
+        ds[data_name].attrs["units"] = "$W^{1}m^{-2}nm^{-1}sr^{-1}$"
+        ds[data_name].attrs["long_name"] = "Radiance (" + data_name + ")."
         ds.attrs["Comment"] = "Created by the python fluospecchio application calibration process, www.rsws.ch"
 
         return ds

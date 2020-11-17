@@ -64,7 +64,13 @@ class MyApp(tkinter.Frame):
         # self.selected_node = self.hierarchy.get(item)
         self.selected_nodes = []
         self.selected_items = self.tree.selection()
+
         for item in self.selected_items:
+            if self.hierarchy.get(item).getName() not in self.stop_hierarchy:
+                if len(self.tree.get_children(item)) == 0:
+                    for i, node in enumerate(list(self.cm.specchio_client.getChildrenOfNode(self.hierarchy.get(item)))):
+                        element_id = self.tree.insert(item, i, text=node.getName())
+                        self.hierarchy[element_id] = node
             self.selected_nodes.append(self.hierarchy.get(item))
             print(self.hierarchy.get(item))
 
@@ -174,10 +180,16 @@ class MyApp(tkinter.Frame):
         # 3. Downlaod its children (will be campaigns):
         self.campaigns = list(self.cm.specchio_client.getChildrenOfNode(self.db_node))
 
-        # 4. Add all the hierarchies down to the processing levels
+        # 4. container for the hierarchies
         self.hierarchy = {}
+
+        # 5. Add campaigns to the hierarchy browser:
         for campaign in self.campaigns:
-            self.recursiveTreeBuilder('', 0, self.hierarchy, campaign)
+            element_id = self.tree.insert('', 0, text=campaign.getName())
+            self.hierarchy[element_id] = campaign
+
+        # for campaign in self.campaigns:
+        #     self.recursiveTreeBuilder('', 0, self.hierarchy, campaign)
 
     def recursiveTreeBuilder(self, parent_object, id, node_dict, node_object):
         element_id = self.tree.insert(parent_object, id, text=node_object.getName())

@@ -201,6 +201,9 @@ class DownloadManager:
                         for key in metadata:
                             reference.get("metadata")[key].append(metadata.get(key).get(j))
 
+                # Always add the filename as metadata element
+                target.get("metadata")['File Name'] = target["name"]
+                reference.get("metadata")['File Name'] = reference["name"]
 
                 # Create Xarray dataset:
                 file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_target.nc'

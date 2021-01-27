@@ -8,6 +8,7 @@ import re
 import os
 import _thread
 
+
 class DownloadManager:
 
     def __init__(self, types, specchio_client, nodes, items, download_path, stop_hierarchy, tree, hierarchy, master_frame):
@@ -22,10 +23,11 @@ class DownloadManager:
         self.log_writer = lw.LogWriter(self.dw_path)
         self.master_frame = master_frame
         self.all_meta = ['Integration Time', 'Optical Compartment Humidity', 'Optical Compartment Temperature',
-                            'PCB Humidity', 'PCB Temperature', 'Spectrometer Frame Temperature', 'f_SpecFit_A',
-                            'f_SpecFit_B', 'f_int', 'f_max_FR', 'f_max_FR_wvl', 'f_max_R', 'f_max_R_wvl']
-        self.all_meta_level = {'DN': self.all_meta[0:6], 'Radiance': self.all_meta[0:6],
-                               'Reflectance': self.all_meta[0:6], 'SpecFit': self.all_meta}
+                            'PCB Humidity', 'PCB Temperature', 'Spectrometer Frame Temperature', 'Irradiance Instability', 
+                            'Saturation Count', 'f_SpecFit_A', 'f_SpecFit_B', 'f_int', 'f_max_FR', 'f_max_FR_wvl', 
+                            'f_max_R', 'f_max_R_wvl']
+        self.all_meta_level = {'DN': self.all_meta[0:7], 'Radiance': self.all_meta[0:8],
+                               'Reflectance': self.all_meta[0:8], 'SpecFit': self.all_meta}
 
 
     def startDownload(self):
@@ -101,7 +103,6 @@ class DownloadManager:
                 self.download(self.download_hierarchy.get(name), name)
         else:
             _thread.start_new_thread(self.download, (self.download_hierarchy.get(self.chosen_levels[0]), self.chosen_levels[0]))
-            
 
     def createDownloadHierarchy(self, tree_item, download_dict):
         for child in self.tree.get_children(tree_item):
@@ -197,6 +198,7 @@ class DownloadManager:
                                 target.get("metadata")[key].append(np.nan)
                             else:
                                 target.get("metadata")[key].append(metadata.get(key).get(j))
+                                # print(metadata.get(key).get(j))
 
                     else:
                         reference["signal"].append(vector)

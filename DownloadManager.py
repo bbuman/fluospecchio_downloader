@@ -135,7 +135,9 @@ class DownloadManager:
             sensor_dict.get("FLUO")['target'] = {'pickle_names': [], 'xarray_names': []}
 
         for i, node in enumerate(node_list):
-            self.log_writer.writeLog("INFO", "Downloading the following node: " + str(node.getId()))
+            parent = self.specchio_client.getHierarchyParentId(node.getId())
+            parent_name = self.specchio_client.getHierarchyName(parent)
+            self.log_writer.writeLog("INFO", "Downloading the following node: " + str(parent_name)) # this does not make sense because the node id is not visible to the user!
             # update progress bar
             prog['value'] = (float(i) / len(node_list)) * 100
             self.master_frame.update_idletasks()
@@ -212,7 +214,7 @@ class DownloadManager:
                 reference.get("metadata")['File Name'] = reference["name"]
 
                 # Create Xarray dataset:
-                file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_target.nc'
+                file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(parent_name) + '_target.nc'
                 ds_target = self.to_xarray(target.get('signal'),
                                            target.get('time'),
                                            target.get('metadata'),
@@ -222,7 +224,7 @@ class DownloadManager:
                 ds_target.close()
 
                 if level_identifier == "DN" or level_identifier == "Radiance":
-                    file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(node.getId()) + '_reference.nc'
+                    file_name = self.dw_path + "/" + level_identifier + '_' + sensor_identifier + '_' + str(parent_name) + '_reference.nc'
                     ds_reference = self.to_xarray(reference.get('signal'),
                                            reference.get('time'),
                                            reference.get('metadata'),

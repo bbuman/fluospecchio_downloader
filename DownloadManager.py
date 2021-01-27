@@ -6,7 +6,7 @@ import tkinter.ttk as ttk
 import datetime as dt
 import re
 import os
-
+import _thread
 
 class DownloadManager:
 
@@ -96,8 +96,12 @@ class DownloadManager:
 
     def destroy_and_download(self):
         self.win.destroy()
-        for name in self.chosen_levels:
-            self.download(self.download_hierarchy.get(name), name)
+        if len(self.chosen_levels) > 1:
+            for name in self.chosen_levels:
+                self.download(self.download_hierarchy.get(name), name)
+        else:
+            _thread.start_new_thread(self.download, (self.download_hierarchy.get(self.chosen_levels[0]), self.chosen_levels[0]))
+            
 
     def createDownloadHierarchy(self, tree_item, download_dict):
         for child in self.tree.get_children(tree_item):

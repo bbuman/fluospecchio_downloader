@@ -167,9 +167,15 @@ class MyApp(tkinter.Frame):
         rem_vis.pack(expand=True, side="right", padx=10, pady=10)
 
     def connectionDialog(self):
-        self.createTree()
+        try: 
+            self.tree.destroy()
+        except:
+            print("can't destroy")
         self.findSpecchioClient()
-        self.cm = cm.ConnectionManager(self.master, self.c_path, self)
+        if not len(self.c_path) == 0:
+            self.createTree()
+            self.cm = cm.ConnectionManager(self.master, self.c_path, self)
+        
 
     def buildTree(self):
         # 1. Start with defining lowest hierarchy, this is a hack and not suitable to all specchio implementations!

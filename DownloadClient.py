@@ -169,6 +169,7 @@ class MyApp(tkinter.Frame):
     def connectionDialog(self):
         try: 
             self.tree.destroy()
+            self.vsb.destroy()
         except:
             print("can't destroy")
         self.findSpecchioClient()

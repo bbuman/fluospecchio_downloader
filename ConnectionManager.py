@@ -7,15 +7,24 @@ class ConnectionManager:
     def __init__(self, parent_frame, c_path, download_client):
         self.parent_frame = parent_frame
         self.c_path = c_path
+        self.dbconf_path = c_path.split("specchio-client.jar")[0]
         self.frame = tkinter.Toplevel(self.parent_frame, width=200, height=200)
+        self.check_db_config()
         self.createConnectionDialogWidgets()
         self.dc = download_client
 
-    def connectionDialog(self):
-        self.frame = tkinter.Toplevel(self.parent_frame, width=200, height=200)
-        self.createConnectionDialogWidgets()
+    def check_db_config(self):
+        try:
+            with open(self.dbconf_path + "db_config.txt") as db_conf:
+                self.conn_available = True
+        except:
+            self.conn_available = False
 
     def createConnectionDialogWidgets(self):
+        self.db_config = {"protocol":"", "IP":"", "port":"", "service":"", "user":"", "password":"", "jdbc":""}
+        if self.conn_available:
+            self.parse_db_config()
+
         self.connection_frame = tkinter.Frame(self.frame)
         self.connection_frame.pack()
         self.label_frames = tkinter.Frame(self.connection_frame)
@@ -31,7 +40,10 @@ class ConnectionManager:
         self.button_frame.pack()
         self.chose_protocols = ['http', 'https']
         self.sel_protocol = tkinter.StringVar()
-        self.sel_protocol.set("https")
+        if self.db_config["protocol"] == "":
+            self.sel_protocol.set("https")
+        else:
+            self.sel_protocol.set(self.db_config["protocol"])
         for protocol in self.chose_protocols:
             b = tkinter.Radiobutton(self.button_frame)
             b['text'] = protocol
@@ -47,7 +59,7 @@ class ConnectionManager:
         self.entryServer = tkinter.Entry(self.entry_frames)
         self.entryServer.pack(padx=5, pady=5)
         self.serverName = tkinter.StringVar()
-        self.serverName.set("")
+        self.serverName.set(self.db_config["IP"])
         self.entryServer["textvariable"] = self.serverName
 
         ## Port
@@ -57,7 +69,7 @@ class ConnectionManager:
         self.entryPort = tkinter.Entry(self.entry_frames)
         self.entryPort.pack(padx=5, pady=5)
         self.portName = tkinter.StringVar()
-        self.portName.set("")
+        self.portName.set(self.db_config["port"])
         self.entryPort["textvariable"] = self.portName
 
         ## Application Path
@@ -67,7 +79,7 @@ class ConnectionManager:
         self.entryPath = tkinter.Entry(self.entry_frames)
         self.entryPath.pack(padx=5, pady=5)
         self.pathName = tkinter.StringVar()
-        self.pathName.set("")
+        self.pathName.set(self.db_config["service"])
         self.entryPath["textvariable"] = self.pathName
 
         ## Data Source Name
@@ -77,7 +89,7 @@ class ConnectionManager:
         self.entryDatasource = tkinter.Entry(self.entry_frames)
         self.entryDatasource.pack(padx=5, pady=5)
         self.datasourceName = tkinter.StringVar()
-        self.datasourceName.set("")
+        self.datasourceName.set(self.db_config["jdbc"])
         self.entryDatasource["textvariable"] = self.datasourceName
 
         ## Username
@@ -87,7 +99,7 @@ class ConnectionManager:
         self.entryUsername = tkinter.Entry(self.entry_frames)
         self.entryUsername.pack(padx=5, pady=5)
         self.usernameName = tkinter.StringVar()
-        self.usernameName.set("")
+        self.usernameName.set(self.db_config["user"])
         self.entryUsername["textvariable"] = self.usernameName
 
         ## Password
@@ -97,7 +109,7 @@ class ConnectionManager:
         self.entryPassword = tkinter.Entry(self.entry_frames)
         self.entryPassword.pack(padx=5, pady=5)
         self.passwordName = tkinter.StringVar()
-        self.passwordName.set("")
+        self.passwordName.set(self.db_config["password"])
         self.entryPassword["textvariable"] = self.passwordName
 
         ## Connect
@@ -116,6 +128,24 @@ class ConnectionManager:
     def handler(self):
        print(self.sel_protocol.get())
 
+    def parse_db_config(self):
+        with open(self.dbconf_path + "db_config.txt") as txt:
+            for line in txt.readlines():
+                elements = line.split(",")
+                if line.startswith("http") or line.startswith("https"):
+                    self.db_config["protocol"] = elements[0]
+                    self.db_config["IP"] = elements[1]
+                    self.db_config["port"] = elements[2]
+                    self.db_config["service"] = elements[3]
+                    self.db_config["user"] = elements[4]
+                    self.db_config["password"] = elements[5]
+                    self.db_config["jdbc"] = elements[6]
+                    break
+                else:
+                    continue
+
+
+
     def connectAndDestroy(self):
         """
         connect to the server
@@ -130,7 +160,7 @@ class ConnectionManager:
         self.SPECCHIOTYPES = jp.JPackage('ch').specchio.types
         # 1.3 Create a client factory instance and get a list of all connection details:
         self.cf = self.SPECCHIO.SPECCHIOClientFactory.getInstance()
-
+        print(self.sel_protocol.get())
         ### --- custom login credentials - not yet working: https://username@host:port/service@jdbc
         self.db_descriptor = self.SPECCHIO.SPECCHIOWebAppDescriptor(
                                                               jp.JString(self.sel_protocol.get()),         # http or https

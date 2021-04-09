@@ -274,18 +274,7 @@ class DownloadManager:
         """
         # Write 
         self.log_writer.writeLog("INFO", "Downloading the following processing level: " + level_identifier)
-
-        sensor_dict = {'FULL': {}, 'FLUO': {}}
-
-        if level_identifier == "DN" or level_identifier == "Radiance":
-            sensor_dict.get("FULL")['target'] = {'pickle_names': [], 'xarray_names': []}
-            sensor_dict.get("FLUO")['target'] = {'pickle_names': [], 'xarray_names': []}
-            sensor_dict.get("FULL")['reference'] = {'pickle_names': [], 'xarray_names': []}
-            sensor_dict.get("FLUO")['reference'] = {'pickle_names': [], 'xarray_names': []}
-        else:
-            sensor_dict.get("FULL")['target'] = {'pickle_names': [], 'xarray_names': []}
-            sensor_dict.get("FLUO")['target'] = {'pickle_names': [], 'xarray_names': []}
-
+        
         for i, node in enumerate(node_list):
             # 1. Find the name of the hierarchy 
             parent = self.specchio_client.getHierarchyParentId(node.getId())

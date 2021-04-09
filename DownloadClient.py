@@ -96,9 +96,10 @@ class MyApp(tkinter.Frame):
             self.download_manager = dm.DownloadManager(self.cm.SPECCHIOTYPES, self.cm.specchio_client,
                                                        nodes, self.selected_items, self.folder_path, self.stop_hierarchy,
                                                        self.tree, self.hierarchy, self.master)
-            self.download_manager.startDownload()
+            # self.download_manager.startDownload()
 
-        except AttributeError:
+        except AttributeError as ae:
+            print(ae)
             win = tkinter.Toplevel()
             win.wm_title("ERROR")
             l = tkinter.Label(win, text="Failed to Download. Please connect to DB first and then select some data.")

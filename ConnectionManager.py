@@ -1,7 +1,6 @@
 import tkinter
 import jpype as jp
 
-
 class ConnectionManager:
 
     def __init__(self, parent_frame, c_path, download_client):

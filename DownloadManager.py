@@ -1,5 +1,4 @@
 import LogWriter as lw
-import xarray as xr
 import numpy as np
 import tkinter
 import tkinter.ttk as ttk
@@ -9,7 +8,6 @@ import datetime as dt
 from cftime import num2date, date2num
 import re
 import os
-import _thread
 # Default fill values:
 # {'S1': '\x00',
 #  'i1': -127,
@@ -125,28 +123,25 @@ class DownloadManager:
     def destroy_and_download(self):
         self.win.destroy()
         # 1.  Find the name of the selected campaign:
-        # stop = False
-        # cur_id = self.download_hierarchy.get(self.chosen_levels[0])[0].getId()
-        # while not stop:
-        #     p_id = self.specchio_client.getHierarchyParentId(cur_id)
-        #     if p_id == cur_id:
-        #         stop = True
-        #     cur_id = p_id
-        
-        # campaign_name = self.specchio_client.getHierarchyName(cur_id)
-        campaign_name = "dataset"
+        stop = False
+        cur_parent = self.tree.parent(self.selected_items[0])
+        print("start parent", str(cur_parent))
+        while not stop:
+            new_parent = self.tree.parent(cur_parent)
+            print("new parent", str(self.tree.item(new_parent)["text"]))
+            if new_parent == "":
+                stop = True
+                break
+            cur_parent = new_parent
+        campaign_name = self.tree.item(cur_parent)["text"]
         # 2. Prepare the file 
         self.prepare_netcdf(self.chosen_levels, campaign_name)
         # 3. Download the processing levels 
         for name in self.chosen_levels:
-            # _thread.start_new_thread(self.download_window, (name,))
-            # self.download_window(name)
-            # _thread.start_new_thread(self.download_processing_level, (self.download_hierarchy.get(name), name))
             self.download_processing_level(self.download_hierarchy.get(name), name)
 
         self.rootgrp.close()
             
-
     def createDownloadHierarchy(self, tree_item, download_dict):
         for child in self.tree.get_children(tree_item):
             child_name = self.hierarchy.get(child).getName()

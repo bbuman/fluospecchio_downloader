@@ -5,6 +5,7 @@ import tkinter.ttk as ttk
 import datetime as dt
 import netCDF4 as nc4
 import datetime as dt
+import jpype as jp
 from cftime import num2date, date2num
 import re
 import os
@@ -172,54 +173,84 @@ class DownloadManager:
         """
         now = dt.datetime.now()
         file_name = "/" + campaign_name + "_" + now.strftime(format="%Y_%m_%d_%H_%M") + ".nc"
+        # 1.1 Root group:
         self.rootgrp = nc4.Dataset(self.dw_path + file_name, "w", format="NETCDF4")
+        # 1.2 Root group attributes
+        self.rootgrp.description="FloX data downloaded from the Fluospecchio stack."
+        self.rootgrp.campaign_name=campaign_name
+        self.rootgrp.data_ownership="Remote Sensing of Water Systems (RSWS), Department of Geography, University of Zurich, Switzerland"
+        self.rootgrp.url="www.rsws.ch"
+        # 2. Create Sensor groups:
+        # 2.1 FLUO
+        self.rootgrp.createGroup("FLUO")
+        # 2.2 FULL
+        self.rootgrp.createGroup("FULL")
+        # 2.3 Sensor attributes
+        self.rootgrp["FLUO"].sensor="Optic-Spec 1 (FLUO)"
+        self.rootgrp["FLUO"].ssi="0.17 nm"
+        self.rootgrp["FLUO"].fwhm="0.3 nm"
+        self.rootgrp["FLUO"].fov="Dual FOV. Upwelling radiance 25°. Downwelling radiance 180°"
+        self.rootgrp["FLUO"].snr="1000"
+        self.rootgrp["FULL"].sensor="Optic-Spec 2 (FULL)"
+        self.rootgrp["FULL"].ssi="0.65 nm"
+        self.rootgrp["FULL"].fwhm="1.5 nm"
+        self.rootgrp["FULL"].fov="Dual FOV. Upwelling radiance 25°. Downwelling radiance 180°"
+
         for level in chosen_levels:
-            # 1. Creating the groups
-            self.rootgrp.createGroup(level)
-            # 1.1 FLUO
-            self.rootgrp.createGroup(level+"/FLUO")
-            self.rootgrp.createGroup(level+"/FLUO/Downwelling")
-            self.rootgrp.createGroup(level+"/FLUO/Upwelling")
-            # 1.2 FULL
-            self.rootgrp.createGroup(level+"/FULL")
-            self.rootgrp.createGroup(level+"/FULL/Downwelling")
-            self.rootgrp.createGroup(level+"/FULL/Upwelling")
+            # 3. Creating the level groups
+            self.rootgrp["FLUO"].createGroup(level)
+            self.rootgrp["FULL"].createGroup(level)
+            # 4. Creating the data groups:
+            # 4.1 FLUO
+            self.rootgrp.createGroup("FLUO/"+level+"/Upwelling")
+            self.rootgrp.createGroup("FLUO/"+level+"/Downwelling")
+            # 4.2 FULL
+            self.rootgrp.createGroup("FULL/"+level+"/Upwelling")
+            self.rootgrp.createGroup("FULL/"+level+"/Downwelling")
 
             # 2. Creating the dimensions (wavelength, time)
             # 2.1 FLUO
-            self.rootgrp[level+"/FLUO/Downwelling"].createDimension("wavelength", 1024) # get correct length from data
-            self.rootgrp[level+"/FLUO/Downwelling"].createDimension("time", None) # we don't know the correct length at runtime
-            self.rootgrp[level+"/FLUO/Upwelling"].createDimension("wavelength", 1024) 
-            self.rootgrp[level+"/FLUO/Upwelling"].createDimension("time", None)
+            self.rootgrp["FLUO/"+level+"/Downwelling"].createDimension("wavelength", 1024) # get correct length from data
+            self.rootgrp["FLUO/"+level+"/Downwelling"].createDimension("time", None) # we don't know the correct length at runtime
+            self.rootgrp["FLUO/"+level+"/Upwelling"].createDimension("wavelength", 1024) 
+            self.rootgrp["FLUO/"+level+"/Upwelling"].createDimension("time", None)
             # 2.2 FULL
-            self.rootgrp[level+"/FULL/Downwelling"].createDimension("wavelength", 1024) 
-            self.rootgrp[level+"/FULL/Downwelling"].createDimension("time", None) 
-            self.rootgrp[level+"/FULL/Upwelling"].createDimension("wavelength", 1024) 
-            self.rootgrp[level+"/FULL/Upwelling"].createDimension("time", None) 
+            self.rootgrp["FULL/"+level+"/Downwelling"].createDimension("wavelength", 1024) 
+            self.rootgrp["FULL/"+level+"/Downwelling"].createDimension("time", None) 
+            self.rootgrp["FULL/"+level+"/Upwelling"].createDimension("wavelength", 1024) 
+            self.rootgrp["FULL/"+level+"/Upwelling"].createDimension("time", None) 
 
             # 3. Create variables for coordinates
             # 3.1 FLUO
-            self.rootgrp[level+"/FLUO/Downwelling"].createVariable("wavelength","f8",("wavelength",)) # f8 = 64-bit floating point
-            self.rootgrp[level+"/FLUO/Downwelling"]["wavelength"].units = "nm"
-            self.rootgrp[level+"/FLUO/Downwelling"].createVariable("time", "f8", ("time",))
-            self.rootgrp[level+"/FLUO/Downwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
-            self.rootgrp[level+"/FLUO/Downwelling"]["time"].calendar = "standard"
-            self.rootgrp[level+"/FLUO/Upwelling"].createVariable("wavelength","f8",("wavelength",))
-            self.rootgrp[level+"/FLUO/Upwelling"]["wavelength"].units = "nm"
-            self.rootgrp[level+"/FLUO/Upwelling"].createVariable("time", "f8", ("time",))
-            self.rootgrp[level+"/FLUO/Upwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
-            self.rootgrp[level+"/FLUO/Upwelling"]["time"].calendar = "standard"
+            self.rootgrp["FLUO/"+level+"/Downwelling"].createVariable("wavelength","f8",("wavelength",)) # f8 = 64-bit floating point
+            self.rootgrp["FLUO/"+level+"/Downwelling"]["wavelength"].units = "nm"
+            self.rootgrp["FLUO/"+level+"/Downwelling"]["wavelength"].long_name = "Wavelength"
+            self.rootgrp["FLUO/"+level+"/Downwelling"].createVariable("time", "f8", ("time",))
+            self.rootgrp["FLUO/"+level+"/Downwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
+            self.rootgrp["FLUO/"+level+"/Downwelling"]["time"].calendar = "standard"
+            self.rootgrp["FLUO/"+level+"/Downwelling"]["time"].long_name = "Time"
+            self.rootgrp["FLUO/"+level+"/Upwelling"].createVariable("wavelength","f8",("wavelength",))
+            self.rootgrp["FLUO/"+level+"/Upwelling"]["wavelength"].units = "nm"
+            self.rootgrp["FLUO/"+level+"/Upwelling"]["wavelength"].long_name = "Wavelength"
+            self.rootgrp["FLUO/"+level+"/Upwelling"].createVariable("time", "f8", ("time",))
+            self.rootgrp["FLUO/"+level+"/Upwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
+            self.rootgrp["FLUO/"+level+"/Upwelling"]["time"].calendar = "standard"
+            self.rootgrp["FLUO/"+level+"/Upwelling"]["time"].long_name = "Time"
             # 3.2 FULL
-            self.rootgrp[level+"/FULL/Downwelling"].createVariable("wavelength","f8",("wavelength",)) 
-            self.rootgrp[level+"/FULL/Downwelling"]["wavelength"].units = "nm"
-            self.rootgrp[level+"/FULL/Downwelling"].createVariable("time", "f8", ("time",))
-            self.rootgrp[level+"/FULL/Downwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
-            self.rootgrp[level+"/FULL/Downwelling"]["time"].calendar = "standard"
-            self.rootgrp[level+"/FULL/Upwelling"].createVariable("wavelength","f8",("wavelength",))
-            self.rootgrp[level+"/FULL/Upwelling"]["wavelength"].units = "nm"
-            self.rootgrp[level+"/FULL/Upwelling"].createVariable("time", "f8", ("time",))
-            self.rootgrp[level+"/FULL/Upwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
-            self.rootgrp[level+"/FULL/Upwelling"]["time"].calendar = "standard"
+            self.rootgrp["FULL/"+level+"/Downwelling"].createVariable("wavelength","f8",("wavelength",)) 
+            self.rootgrp["FULL/"+level+"/Downwelling"]["wavelength"].units = "nm"
+            self.rootgrp["FULL/"+level+"/Downwelling"]["wavelength"].long_name = "Wavelength"
+            self.rootgrp["FULL/"+level+"/Downwelling"].createVariable("time", "f8", ("time",))
+            self.rootgrp["FULL/"+level+"/Downwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
+            self.rootgrp["FULL/"+level+"/Downwelling"]["time"].calendar = "standard"
+            self.rootgrp["FULL/"+level+"/Downwelling"]["time"].long_name = "Time"
+            self.rootgrp["FULL/"+level+"/Upwelling"].createVariable("wavelength","f8",("wavelength",))
+            self.rootgrp["FULL/"+level+"/Upwelling"]["wavelength"].units = "nm"
+            self.rootgrp["FULL/"+level+"/Upwelling"]["wavelength"].long_name = "Wavelength"
+            self.rootgrp["FULL/"+level+"/Upwelling"].createVariable("time", "f8", ("time",))
+            self.rootgrp["FULL/"+level+"/Upwelling"]["time"].units = "seconds since 1970-01-01 00:00:00"
+            self.rootgrp["FULL/"+level+"/Upwelling"]["time"].calendar = "standard"
+            self.rootgrp["FULL/"+level+"/Upwelling"]["time"].long_name = "Time"
 
             # 4. Create variables for the measurements
             # 4.1 define data type and unit type
@@ -230,15 +261,15 @@ class DownloadManager:
             else:
                 utype = "a.u."
             # 4.2 FLUO
-            self.rootgrp[level+"/FLUO/Downwelling"].createVariable("downwelling", "f8", ("wavelength", "time",)) 
-            self.rootgrp[level+"/FLUO/Downwelling"]["downwelling"].units = utype
-            self.rootgrp[level+"/FLUO/Upwelling"].createVariable("upwelling", "f8", ("wavelength", "time",)) 
-            self.rootgrp[level+"/FLUO/Upwelling"]["upwelling"].units = utype
+            self.rootgrp["FLUO/"+level+"/Downwelling"].createVariable("downwelling", "f8", ("wavelength", "time",)) 
+            self.rootgrp["FLUO/"+level+"/Downwelling"]["downwelling"].units = utype
+            self.rootgrp["FLUO/"+level+"/Upwelling"].createVariable("upwelling", "f8", ("wavelength", "time",)) 
+            self.rootgrp["FLUO/"+level+"/Upwelling"]["upwelling"].units = utype
             # 4.3 FULL
-            self.rootgrp[level+"/FULL/Downwelling"].createVariable("downwelling", "f8", ("wavelength", "time",)) 
-            self.rootgrp[level+"/FULL/Downwelling"]["downwelling"].units = utype
-            self.rootgrp[level+"/FULL/Upwelling"].createVariable("upwelling", "f8", ("wavelength", "time",)) 
-            self.rootgrp[level+"/FULL/Upwelling"]["upwelling"].units = utype
+            self.rootgrp["FULL/"+level+"/Downwelling"].createVariable("downwelling", "f8", ("wavelength", "time",)) 
+            self.rootgrp["FULL/"+level+"/Downwelling"]["downwelling"].units = utype
+            self.rootgrp["FULL/"+level+"/Upwelling"].createVariable("upwelling", "f8", ("wavelength", "time",)) 
+            self.rootgrp["FULL/"+level+"/Upwelling"]["upwelling"].units = utype
 
             # 5. Create variables for the file name, they align with the time dimension - currently not working
             # 5.1 FLUO
@@ -253,11 +284,11 @@ class DownloadManager:
             for mp in self.chosen_meta:
                 if mp in self.level_meta.get(level):
                     # 6.1 FLUO
-                    self.rootgrp[level+"/FLUO/Downwelling"].createVariable(mp, "f8", ("time",)) 
-                    self.rootgrp[level+"/FLUO/Upwelling"].createVariable(mp, "f8", ("time",)) 
+                    self.rootgrp["FLUO/"+level+"/Downwelling"].createVariable(mp, "f8", ("time",)) 
+                    self.rootgrp["FLUO/"+level+"/Upwelling"].createVariable(mp, "f8", ("time",)) 
                     # 6.2 FULL
-                    self.rootgrp[level+"/FULL/Downwelling"].createVariable(mp, "f8", ("time",)) 
-                    self.rootgrp[level+"/FULL/Upwelling"].createVariable(mp, "f8", ("time",)) 
+                    self.rootgrp["FULL/"+level+"/Downwelling"].createVariable(mp, "f8", ("time",)) 
+                    self.rootgrp["FULL/"+level+"/Upwelling"].createVariable(mp, "f8", ("time",)) 
 
         self.log_writer.writeLog("INFO", "NetCDF4 file created.")
                
@@ -300,6 +331,8 @@ class DownloadManager:
                 # 4.6 Download metadata: Acquisition Time UTC and File Name
                 names = self.specchio_client.getMetaparameterValues(space_ids, 'File Name')
                 timings = self.specchio_client.getMetaparameterValues(space_ids, 'Acquisition Time (UTC)')
+                instr_id = self.specchio_client.getSpectrum(space_ids.get(0), jp.JBoolean(False)).getInstrumentId() 
+                instr_name = str(self.specchio_client.getInstrument(instr_id).getInstrumentName().toString())
                 # 4.7 Download selected metadata
                 metadata = {}
                 for mp in self.chosen_meta:
@@ -329,23 +362,24 @@ class DownloadManager:
                         direction = "Upwelling"
                         var_name = "upwelling"
                         up_count +=1
-                    # 4.8.5 If first run, then add wavelength data to the wavelength dimension
+                    # 4.8.5 If first run, then add wavelength data to the wavelength dimension and metadata of sensor
                     if i == 0 and (dw_count == 1 or up_count == 1):
-                        self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction]["wavelength"][:] = space_wvl[:]
+                        self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction]["wavelength"][:] = space_wvl[:]
+                        self.rootgrp[sensor_identifier].instrument_name = instr_name
                     # 4.8.6 Add timestamp to time dimension
                     # Convert timestamp to numeric, based on specified unit and calendar (see point 3 in prepare_netcdf)
-                    cur_index = self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction]["time"].shape[0]
-                    t_num = date2num(t, units=self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction]["time"].units, calendar=self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction]["time"].calendar)
-                    self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction]["time"][cur_index] = t_num
+                    cur_index = self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction]["time"].shape[0]
+                    t_num = date2num(t, units=self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction]["time"].units, calendar=self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction]["time"].calendar)
+                    self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction]["time"][cur_index] = t_num
                     # 4.8.7 Insert measurement to netcdf
-                    self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction][var_name][:,cur_index] = vector[:]
+                    self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction][var_name][:,cur_index] = vector[:]
                     # 4.8.8 Insert file name to netcdf - currently not working (see point 5 in prepare_netcdf)
                     # self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction]["file_name"][cur_index] = name
                     # 4.8.9 Insert other metaparameters
                     for key in metadata:
                         if metadata.get(key).get(j) == None:
-                            self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction][key][cur_index] = 9.969209968386869e+36
+                            self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction][key][cur_index] = 9.969209968386869e+36
                         elif float(metadata.get(key).get(j)) == -999.0:
-                            self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction][key][cur_index] = 9.969209968386869e+36
+                            self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction][key][cur_index] = 9.969209968386869e+36
                         else:
-                            self.rootgrp[level_identifier + "/" + sensor_identifier + "/" + direction][key][cur_index] = metadata.get(key).get(j)
+                            self.rootgrp[sensor_identifier + "/" + level_identifier + "/" + direction][key][cur_index] = metadata.get(key).get(j)

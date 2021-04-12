@@ -15,6 +15,7 @@ class MyApp(tkinter.Frame):
         master.config(menu=self.menuBar)
         self.fillMenuBar()
         self.createWidgets()
+        self.restricted_view = False
 
     def browseFiles(self):
         filename = filedialog.askdirectory(title="Select a File")
@@ -103,7 +104,8 @@ class MyApp(tkinter.Frame):
         # 1. Start with defining lowest hierarchy, this is a hack and not suitable to all specchio implementations!
         self.stop_hierarchy = ["DN", "Radiance", "Reflectance", "SpecFit"]
         # 2. Start with a database node:
-        self.db_node = self.cm.specchio_client.getDatabaseNode(jp.JString("Acquisition Time"), jp.JBoolean(True))
+
+        self.db_node = self.cm.specchio_client.getDatabaseNode(jp.JString("Acquisition Time"), jp.JBoolean(self.restricted_view))
 
         # 3. Downlaod its children (will be campaigns):
         self.campaigns = list(self.cm.specchio_client.getChildrenOfNode(self.db_node))
@@ -118,7 +120,7 @@ class MyApp(tkinter.Frame):
 
         # for campaign in self.campaigns:
         #     self.recursiveTreeBuilder('', 0, self.hierarchy, campaign)
-
+    
     def recursiveTreeBuilder(self, parent_object, id, node_dict, node_object):
         element_id = self.tree.insert(parent_object, id, text=node_object.getName())
         node_dict[element_id] = node_object

@@ -5,7 +5,6 @@ import numpy as np
 import datetime as dt
 import ConnectionManager as cm
 import DownloadManager as dm
-import CalibrationManager as cal_man
 from tkinter import filedialog
 
 class MyApp(tkinter.Frame):

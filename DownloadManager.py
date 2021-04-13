@@ -203,10 +203,14 @@ class DownloadManager:
             # 4. Creating the data groups:
             # 4.1 FLUO
             self.rootgrp.createGroup("FLUO/"+level+"/Upwelling")
+            self.rootgrp["FLUO/"+level+"/Upwelling"].description = "Upwelling (target reflected) radiation"
             self.rootgrp.createGroup("FLUO/"+level+"/Downwelling")
+            self.rootgrp["FLUO/"+level+"/Downwelling"].description = "Downwelling solar radiation"
             # 4.2 FULL
             self.rootgrp.createGroup("FULL/"+level+"/Upwelling")
+            self.rootgrp["FULL/"+level+"/Upwelling"].description = "Upwelling (target reflected) radiation"
             self.rootgrp.createGroup("FULL/"+level+"/Downwelling")
+            self.rootgrp["FULL/"+level+"/Downwelling"].description = "Downwelling solar radiation"
 
             # 2. Creating the dimensions (wavelength, time)
             # 2.1 FLUO

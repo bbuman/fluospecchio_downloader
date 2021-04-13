@@ -256,20 +256,27 @@ class DownloadManager:
             # 4.1 define data type and unit type
             if level == "DN":
                 utype = "DN"
+                name = "Digital Numbers"
             elif level == "Radiance" or "SpecFit":
                 utype = "W/m2/nm/sr"
+                name = "Radiance"
             else:
                 utype = "a.u."
+                name = "Reflectance"
             # 4.2 FLUO
             self.rootgrp["FLUO/"+level+"/Downwelling"].createVariable("downwelling", "f8", ("wavelength", "time",)) 
             self.rootgrp["FLUO/"+level+"/Downwelling"]["downwelling"].units = utype
+            self.rootgrp["FLUO/"+level+"/Downwelling"]["downwelling"].long_name = name
             self.rootgrp["FLUO/"+level+"/Upwelling"].createVariable("upwelling", "f8", ("wavelength", "time",)) 
             self.rootgrp["FLUO/"+level+"/Upwelling"]["upwelling"].units = utype
+            self.rootgrp["FLUO/"+level+"/Upwelling"]["upwelling"].long_name = name
             # 4.3 FULL
             self.rootgrp["FULL/"+level+"/Downwelling"].createVariable("downwelling", "f8", ("wavelength", "time",)) 
             self.rootgrp["FULL/"+level+"/Downwelling"]["downwelling"].units = utype
+            self.rootgrp["FULL/"+level+"/Downwelling"]["downwelling"].units = name
             self.rootgrp["FULL/"+level+"/Upwelling"].createVariable("upwelling", "f8", ("wavelength", "time",)) 
             self.rootgrp["FULL/"+level+"/Upwelling"]["upwelling"].units = utype
+            self.rootgrp["FULL/"+level+"/Upwelling"]["upwelling"].long_name = name
 
             # 5. Create variables for the file name, they align with the time dimension - currently not working
             # 5.1 FLUO
